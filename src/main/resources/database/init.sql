@@ -1,56 +1,63 @@
-CREATE DATABASE IF NOT EXISTS bookstore CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+--CREATE DATABASE IF NOT EXISTS bookstore CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 USE bookstore;
 
+
 CREATE TABLE IF NOT EXISTS categories (
-    category_id INT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(255) NOT NULL,
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL UNIQUE,
     description TEXT
 );
 
 CREATE TABLE IF NOT EXISTS books (
-    book_id INT PRIMARY KEY AUTO_INCREMENT,
+    id INT PRIMARY KEY AUTO_INCREMENT,
     title VARCHAR(255) NOT NULL,
     author VARCHAR(255) NOT NULL,
-    published_date TIMESTAMP NOT NULL,
+    category VARCHAR(255) NOT NULL,
     price DECIMAL(10, 2) NOT NULL,
-    stock INT NOT NULL,
-    description TEXT,
-    image VARCHAR(255),
-    category_id INT,
-    FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE SET NULL
+    quantity INT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS customers (
-    customer_id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
-    phone VARCHAR(10) NOT NULL,
-    address TEXT
+    phone VARCHAR(20) NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS supplier (
-    supplier_id INT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(255) NOT NULL,
-    phone VARCHAR(10) NOT NULL,
-    address TEXT
+CREATE TABLE IF NOT EXISTS invoices (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    customer_id INT NOT NULL,
+    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    total_amount DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS orders (
-    order_id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
-    customer_id CHAR(36) NOT NULL,
-    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    total_amount DECIMAL(10, 2) NOT NULL,
-    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE
+-- Thêm bảng users cho quản lý người dùng theo vai trò
+CREATE TABLE IF NOT EXISTS users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(100) NOT NULL,
+    full_name VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL,    -- ADMIN hoặc STAFF
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP NULL
 );
 
-CREATE TABLE IF NOT EXISTS order_items (
-    order_item_id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
-    order_id CHAR(36) NOT NULL,
-    book_id INT NOT NULL,
+CREATE TABLE IF NOT EXISTS invoice_items (
+    invoice_id INT,
+    book_id INT,
     quantity INT NOT NULL,
-    price DECIMAL(10, 2) NOT NULL,
-    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
-    FOREIGN KEY (book_id) REFERENCES books(book_id) ON DELETE CASCADE
+    unit_price DECIMAL(10, 2) NOT NULL,
+    PRIMARY KEY (invoice_id, book_id),
+    FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
+    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
 );
 
-# DROP DATABASE IF EXISTS bookstore;
+-- Dữ liệu mẫu cho bảng users
+-- Sử dụng INSERT IGNORE để bỏ qua lỗi khi username đã tồn tại
+INSERT IGNORE INTO users (username, password, full_name, role, active) VALUES
+('admin', 'admin123', 'Administrator', 'ADMIN', true);
+
+-- Để xóa database và tạo lại, bỏ comment dòng dưới đây:
+-- DROP DATABASE IF EXISTS bookstore;

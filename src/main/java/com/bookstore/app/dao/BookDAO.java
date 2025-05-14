@@ -4,38 +4,46 @@ import com.bookstore.app.model.Book;
 import com.bookstore.app.util.DBConnection;
 
 import java.sql.Connection;
-import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
 public class BookDAO {
     private static final String SELECT_ALL_BOOKS = "SELECT * FROM books";
-    private static final String SELECT_BOOK_BY_ID = "SELECT * FROM books WHERE book_id = ?";
-    private static final String SELECT_BOOKS_PAGINATED = "SELECT * FROM books LIMIT ? OFFSET ?";
-    private static final String INSERT_BOOK = "INSERT INTO books (title, author, published_date, price, stock, description, image, category_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-    private static final String UPDATE_BOOK = "UPDATE books SET title = ?, author = ?, published_date = ?, price = ?, stock = ?, description = ?, image = ?, category_id = ? WHERE id = ?";
-    private static final String DELETE_BOOK = "DELETE FROM books WHERE book_id = ?";
+    private static final String SELECT_BOOK_BY_ID = "SELECT * FROM books WHERE id = ?";
+    private static final String INSERT_BOOK = "INSERT INTO books (title, author, category, price, quantity) VALUES (?, ?, ?, ?, ?)";
+    private static final String UPDATE_BOOK = "UPDATE books SET title = ?, author = ?, category = ?, price = ?, quantity = ? WHERE id = ?";
+    private static final String DELETE_BOOK = "DELETE FROM books WHERE id = ?";
     private static final String COUNT_BOOKS = "SELECT COUNT(*) FROM books";
 
-    public List<Book> getAllBooks() throws SQLException {
+    public List<Book> getAllBooks() {
         List<Book> books = new ArrayList<>();
-
+        
         try (
             Connection connection = DBConnection.getConnection();
-            PreparedStatement preparedStatement = connection.prepareStatement(SELECT_ALL_BOOKS);
-            ResultSet resultSet = preparedStatement.executeQuery()
+            Statement statement = connection.createStatement();
+            ResultSet resultSet = statement.executeQuery(SELECT_ALL_BOOKS)
         ) {
             while (resultSet.next()) {
-                books.add(extractBookFromResultSet(resultSet));
+                books.add(new Book(
+                    resultSet.getInt("id"),
+                    resultSet.getString("title"),
+                    resultSet.getString("author"),
+                    resultSet.getString("category"),
+                    resultSet.getDouble("price"),
+                    resultSet.getInt("quantity")
+                ));
             }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
         return books;
     }
-
-    public Book getBookById(int id) throws SQLException {
+    
+    public Book getBookById(int id) {
         try (
             Connection connection = DBConnection.getConnection();
             PreparedStatement preparedStatement = connection.prepareStatement(SELECT_BOOK_BY_ID)
@@ -44,70 +52,88 @@ public class BookDAO {
             
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 if (resultSet.next()) {
-                    return extractBookFromResultSet(resultSet);
+                    return new Book(
+                        resultSet.getInt("id"),
+                        resultSet.getString("title"),
+                        resultSet.getString("author"),
+                        resultSet.getString("category"),
+                        resultSet.getDouble("price"),
+                        resultSet.getInt("quantity")
+                    );
                 }
             }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
         return null;
     }
-
-    public boolean addBook(Book book) throws SQLException {
+    
+    public boolean addBook(Book book) {
         try (
             Connection connection = DBConnection.getConnection();
-            PreparedStatement preparedStatement = connection.prepareStatement(INSERT_BOOK)
+            PreparedStatement preparedStatement = connection.prepareStatement(INSERT_BOOK, Statement.RETURN_GENERATED_KEYS)
         ) {
-            setBookParameters(preparedStatement, book);
-            int rowsAffected = preparedStatement.executeUpdate();
-            return rowsAffected > 0;
+            preparedStatement.setString(1, book.getTitle());
+            preparedStatement.setString(2, book.getAuthor());
+            preparedStatement.setString(3, book.getCategory());
+            preparedStatement.setDouble(4, book.getPrice());
+            preparedStatement.setInt(5, book.getQuantity());
+            
+            int affectedRows = preparedStatement.executeUpdate();
+            
+            if (affectedRows > 0) {
+                try (ResultSet generatedKeys = preparedStatement.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        book.setId(generatedKeys.getInt(1));
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
         }
     }
-
-    public boolean updateBook(Book book) throws SQLException {
+    
+    public boolean updateBook(Book book) {
         try (
             Connection connection = DBConnection.getConnection();
             PreparedStatement preparedStatement = connection.prepareStatement(UPDATE_BOOK)
         ) {
-            setBookParameters(preparedStatement, book);
-            preparedStatement.setInt(8, book.getId());
-            int rowsAffected = preparedStatement.executeUpdate();
-            return rowsAffected > 0;
+            preparedStatement.setString(1, book.getTitle());
+            preparedStatement.setString(2, book.getAuthor());
+            preparedStatement.setString(3, book.getCategory());
+            preparedStatement.setDouble(4, book.getPrice());
+            preparedStatement.setInt(5, book.getQuantity());
+            preparedStatement.setInt(6, book.getId());
+            
+            int affectedRows = preparedStatement.executeUpdate();
+            return affectedRows > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
         }
     }
-
-    public boolean deleteBook(int id) throws SQLException {
+    
+    public boolean deleteBook(int id) {
         try (
             Connection connection = DBConnection.getConnection();
             PreparedStatement preparedStatement = connection.prepareStatement(DELETE_BOOK)
         ) {
             preparedStatement.setInt(1, id);
-            int rowsAffected = preparedStatement.executeUpdate();
-            return rowsAffected > 0;
-        }
-    }
-
-    public List<Book> getBooksPaginated(int pageNumber, int pageSize) throws SQLException {
-        List<Book> books = new ArrayList<>();
-        
-        int offset = (pageNumber - 1) * pageSize;
-        
-        try (
-            Connection connection = DBConnection.getConnection();
-            PreparedStatement preparedStatement = connection.prepareStatement(SELECT_BOOKS_PAGINATED)
-        ) {
-            preparedStatement.setInt(1, pageSize);
-            preparedStatement.setInt(2, offset);
             
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                while (resultSet.next()) {
-                    books.add(extractBookFromResultSet(resultSet));
-                }
-            }
+            int affectedRows = preparedStatement.executeUpdate();
+            return affectedRows > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
         }
-        return books;
     }
     
     public List<Book> getBooksPaginatedWithSortAndFilter(int pageNumber, int pageSize, String sortField, String sortOrder,
-                                                         String filterField, String filterValue) throws SQLException {
+                                                         String filterField, String filterValue) {
         List<Book> books = new ArrayList<>();
         
         int offset = (pageNumber - 1) * pageSize;
@@ -144,14 +170,23 @@ public class BookDAO {
             
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
-                    books.add(extractBookFromResultSet(resultSet));
+                    books.add(new Book(
+                        resultSet.getInt("id"),
+                        resultSet.getString("title"),
+                        resultSet.getString("author"),
+                        resultSet.getString("category"),
+                        resultSet.getDouble("price"),
+                        resultSet.getInt("quantity")
+                    ));
                 }
             }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
         return books;
     }
     
-    public int getTotalBooks() throws SQLException {
+    public int getTotalBooks() {
         try (
             Connection connection = DBConnection.getConnection();
             PreparedStatement preparedStatement = connection.prepareStatement(COUNT_BOOKS);
@@ -160,11 +195,13 @@ public class BookDAO {
             if (resultSet.next()) {
                 return resultSet.getInt(1);
             }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
         return 0;
     }
     
-    public int getTotalFilteredBooks(String filterField, String filterValue) throws SQLException {
+    public int getTotalFilteredBooks(String filterField, String filterValue) {
         StringBuilder queryBuilder = new StringBuilder(COUNT_BOOKS);
         
         if (filterField != null && !filterField.isEmpty() && filterValue != null) {
@@ -184,32 +221,9 @@ public class BookDAO {
                     return resultSet.getInt(1);
                 }
             }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
         return 0;
-    }
-
-    private Book extractBookFromResultSet(ResultSet resultSet) throws SQLException {
-        return new Book(
-            resultSet.getInt("book_id"),
-            resultSet.getString("title"),
-            resultSet.getString("author"),
-            resultSet.getDate("published_date"),
-            resultSet.getDouble("price"),
-            resultSet.getInt("stock"),
-            resultSet.getString("description"),
-            resultSet.getString("image"),
-            resultSet.getInt("category_id")
-        );
-    }
-
-    private void setBookParameters(PreparedStatement preparedStatement, Book book) throws SQLException {
-        preparedStatement.setString(1, book.getTitle());
-        preparedStatement.setString(2, book.getAuthor());
-        preparedStatement.setDate(3, new Date(book.getPublishedDate().getTime()));
-        preparedStatement.setDouble(4, book.getPrice());
-        preparedStatement.setInt(5, book.getStock());
-        preparedStatement.setString(6, book.getDescription());
-        preparedStatement.setString(7, book.getImagePath());
-        preparedStatement.setInt(8, book.getCategoryId());
     }
 }

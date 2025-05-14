@@ -1,17 +1,17 @@
 package com.bookstore.app.model;
 
-public class Category {
+public class Customer {
     private int id;
     private String name;
-    private String description;
+    private String phone;
 
-    public Category() {
+    public Customer() {
     }
 
-    public Category(int id, String name, String description) {
+    public Customer(int id, String name, String phone) {
         this.id = id;
         this.name = name;
-        this.description = description;
+        this.phone = phone;
     }
 
     public int getId() {
@@ -30,16 +30,20 @@ public class Category {
         this.name = name;
     }
 
-    public String getDescription() {
-        return description;
+    public String getPhone() {
+        return phone;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 
     @Override
     public String toString() {
-        return name;
+        return "Customer{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", phone='" + phone + '\'' +
+                '}';
     }
 }
