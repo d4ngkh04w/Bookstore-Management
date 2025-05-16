@@ -1,5 +1,6 @@
 package com.bookstore.app.view;
 
+import com.bookstore.app.controller.CustomerController;
 import com.bookstore.app.model.Customer;
 import com.bookstore.app.service.CustomerService;
 
@@ -8,24 +9,20 @@ import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.List;
 
 public class CustomerManagementView extends JFrame {
-    private MainMenuView mainMenu;
+    private final MainMenuView mainMenu;
     private JTable customerTable;
     private DefaultTableModel tableModel;
-    private JButton addButton, editButton, deleteButton, backButton;
     private JTextField searchField;
     private JComboBox<String> searchTypeComboBox;
-    private CustomerService customerService;
-
+    private final CustomerController customerController;
     public CustomerManagementView(MainMenuView mainMenu) {
         this.mainMenu = mainMenu;
-        this.customerService = CustomerService.getInstance();
+        this.customerController = new CustomerController(CustomerService.getInstance());
         initComponents();
         loadCustomerData();
     }
@@ -36,11 +33,9 @@ public class CustomerManagementView extends JFrame {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        // Main panel with BorderLayout
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // North panel for search functionality
         JPanel searchPanel = new JPanel(new BorderLayout(5, 0));
         searchPanel.setBorder(BorderFactory.createTitledBorder(
             BorderFactory.createEtchedBorder(), "Tìm Kiếm", 
@@ -60,15 +55,14 @@ public class CustomerManagementView extends JFrame {
         searchPanel.add(searchControlsPanel, BorderLayout.CENTER);
 
         // Create Back button in the search panel
-        backButton = new JButton("Quay Lại Menu Chính");
-        backButton.addActionListener(e -> returnToMainMenu());
+        JButton backButton = new JButton("Quay Lại Menu Chính");
+        backButton.addActionListener(_ -> returnToMainMenu());
         JPanel backButtonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         backButtonPanel.add(backButton);
         searchPanel.add(backButtonPanel, BorderLayout.EAST);
 
         mainPanel.add(searchPanel, BorderLayout.NORTH);
 
-        // Table model with column names in Vietnamese
         String[] columnNames = {"ID", "Tên Khách Hàng", "Số Điện Thoại"};
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
@@ -77,12 +71,10 @@ public class CustomerManagementView extends JFrame {
             }
         };
 
-        // Create customer table and scroll pane
         customerTable = new JTable(tableModel);
         customerTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         customerTable.setAutoCreateRowSorter(true);
-        
-        // Set column widths
+
         customerTable.getColumnModel().getColumn(0).setPreferredWidth(50);  // ID
         customerTable.getColumnModel().getColumn(1).setPreferredWidth(200); // Name
         customerTable.getColumnModel().getColumn(2).setPreferredWidth(150); // Phone
@@ -90,12 +82,11 @@ public class CustomerManagementView extends JFrame {
         JScrollPane scrollPane = new JScrollPane(customerTable);
         mainPanel.add(scrollPane, BorderLayout.CENTER);
 
-        // Button panel at the bottom
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
 
-        addButton = new JButton("Thêm Khách Hàng");
-        editButton = new JButton("Sửa Thông Tin");
-        deleteButton = new JButton("Xóa Khách Hàng");
+        JButton addButton = new JButton("Thêm Khách Hàng");
+        JButton editButton = new JButton("Sửa Thông Tin");
+        JButton deleteButton = new JButton("Xóa Khách Hàng");
 
         buttonPanel.add(addButton);
         buttonPanel.add(editButton);
@@ -103,12 +94,11 @@ public class CustomerManagementView extends JFrame {
 
         mainPanel.add(buttonPanel, BorderLayout.SOUTH);
 
-        // Add action listeners
-        addButton.addActionListener(e -> showAddCustomerDialog());
-        editButton.addActionListener(e -> showEditCustomerDialog());
-        deleteButton.addActionListener(e -> deleteSelectedCustomer());
+        addButton.addActionListener(_ -> showAddCustomerDialog());
+        editButton.addActionListener(_ -> showEditCustomerDialog());
+        deleteButton.addActionListener(_ -> deleteSelectedCustomer());
 
-        searchButton.addActionListener(e -> searchCustomers());
+        searchButton.addActionListener(_ -> searchCustomers());
         searchField.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -132,11 +122,10 @@ public class CustomerManagementView extends JFrame {
     }
 
     public void loadCustomerData() {
-        // Clear the table
+
         tableModel.setRowCount(0);
-        
-        // Get all customers and add to the table model
-        List<Customer> customers = customerService.getAllCustomers();
+
+        List<Customer> customers = customerController.getAllCustomers();
         for (Customer customer : customers) {
             tableModel.addRow(new Object[]{
                 customer.getId(),
@@ -150,17 +139,15 @@ public class CustomerManagementView extends JFrame {
         String searchTerm = searchField.getText().trim();
         if (searchTerm.isEmpty()) {
             loadCustomerData();
-            customerTable.setRowSorter(null); // Reset sorter to show all data
+            customerTable.setRowSorter(null);
             return;
         }
         
         int searchType = searchTypeComboBox.getSelectedIndex();
         TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(tableModel);
         customerTable.setRowSorter(sorter);
-        
-        // Filter based on selected search type
-        // 0: Name, 1: Phone
-        int columnToSearch = searchType + 1; // +1 because column 0 is ID
+
+        int columnToSearch = searchType + 1;
         
         sorter.setRowFilter(RowFilter.regexFilter("(?i)" + searchTerm, columnToSearch));
     }
@@ -192,28 +179,23 @@ public class CustomerManagementView extends JFrame {
         dialog.add(formPanel, BorderLayout.CENTER);
         dialog.add(buttonPanel, BorderLayout.SOUTH);
 
-        saveButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String name = nameField.getText().trim();
-                String phone = phoneField.getText().trim();
+        saveButton.addActionListener(_ -> {
+            String name = nameField.getText().trim();
+            String phone = phoneField.getText().trim();
 
-                if (name.isEmpty() || phone.isEmpty()) {
-                    JOptionPane.showMessageDialog(dialog, "Vui lòng nhập đầy đủ thông tin!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
+            if (name.isEmpty() || phone.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "Vui lòng nhập đầy đủ thông tin!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }                Customer newCustomer = new Customer();
+            newCustomer.setName(name);
+            newCustomer.setPhone(phone);
 
-                Customer newCustomer = new Customer();
-                newCustomer.setName(name);
-                newCustomer.setPhone(phone);
-
-                customerService.addCustomer(newCustomer);
-                dialog.dispose();
-                loadCustomerData();
-            }
+            customerController.addCustomer(newCustomer);
+            dialog.dispose();
+            loadCustomerData();
         });
 
-        cancelButton.addActionListener(e -> dialog.dispose());
+        cancelButton.addActionListener(_ -> dialog.dispose());
         dialog.setVisible(true);
     }
 
@@ -224,13 +206,12 @@ public class CustomerManagementView extends JFrame {
             return;
         }
 
-        // Convert row index if table is sorted
         int modelRow = customerTable.getRowSorter() != null 
             ? customerTable.getRowSorter().convertRowIndexToModel(selectedRow) 
             : selectedRow;
 
         int customerId = (int) tableModel.getValueAt(modelRow, 0);
-        Customer customer = customerService.getCustomerById(customerId);
+        Customer customer = customerController.getCustomerById(customerId);
 
         if (customer == null) {
             JOptionPane.showMessageDialog(this, "Không tìm thấy thông tin khách hàng!", "Lỗi", JOptionPane.ERROR_MESSAGE);
@@ -263,27 +244,23 @@ public class CustomerManagementView extends JFrame {
         dialog.add(formPanel, BorderLayout.CENTER);
         dialog.add(buttonPanel, BorderLayout.SOUTH);
 
-        saveButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String name = nameField.getText().trim();
-                String phone = phoneField.getText().trim();
+        saveButton.addActionListener(_ -> {
+            String name = nameField.getText().trim();
+            String phone = phoneField.getText().trim();
 
-                if (name.isEmpty() || phone.isEmpty()) {
-                    JOptionPane.showMessageDialog(dialog, "Vui lòng nhập đầy đủ thông tin!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
-
-                customer.setName(name);
-                customer.setPhone(phone);
-
-                customerService.updateCustomer(customer);
-                dialog.dispose();
-                loadCustomerData();
+            if (name.isEmpty() || phone.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "Vui lòng nhập đầy đủ thông tin!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
             }
+
+            customer.setName(name);
+            customer.setPhone(phone);
+            customerController.updateCustomer(customer);
+            dialog.dispose();
+            loadCustomerData();
         });
 
-        cancelButton.addActionListener(e -> dialog.dispose());
+        cancelButton.addActionListener(_ -> dialog.dispose());
         dialog.setVisible(true);
     }
 
@@ -294,7 +271,6 @@ public class CustomerManagementView extends JFrame {
             return;
         }
 
-        // Convert row index if table is sorted
         int modelRow = customerTable.getRowSorter() != null 
             ? customerTable.getRowSorter().convertRowIndexToModel(selectedRow) 
             : selectedRow;
@@ -310,7 +286,7 @@ public class CustomerManagementView extends JFrame {
         );
 
         if (confirm == JOptionPane.YES_OPTION) {
-            customerService.deleteCustomer(customerId);
+            customerController.deleteCustomer(customerId);
             loadCustomerData();
         }
     }

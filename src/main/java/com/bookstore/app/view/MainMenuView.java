@@ -5,18 +5,11 @@ import com.bookstore.app.service.UserService;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 public class MainMenuView extends JFrame {
-    private JButton bookManagementBtn;
-    private JButton customerManagementBtn;
-    private JButton orderManagementBtn;
-    private JButton reportBtn;
-    private JButton userManagementBtn; // New button for admin
-    private JButton logoutBtn;
-    
-    private User currentUser;    public MainMenuView() {
+    private final User currentUser;
+
+    public MainMenuView() {
         this.currentUser = UserService.getInstance().getCurrentUser();
         initComponents();
     }
@@ -36,7 +29,7 @@ public class MainMenuView extends JFrame {
         JLabel titleLabel = new JLabel("HỆ THỐNG QUẢN LÝ CỬA HÀNG SÁCH", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         headerPanel.add(titleLabel, BorderLayout.CENTER);
-          JPanel userPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JPanel userPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         String roleText = currentUser != null && currentUser.isAdmin() ? "Admin" : "Nhân viên";
         JLabel userLabel = new JLabel("Xin chào, " + (currentUser != null ? currentUser.getFullName() + " (" + roleText + ")" : ""));
         userLabel.setFont(new Font("Arial", Font.ITALIC, 14));
@@ -45,7 +38,7 @@ public class MainMenuView extends JFrame {
         
         mainPanel.add(headerPanel, BorderLayout.NORTH);
 
-        // Menu panel (center)
+        // Menu panel
         JPanel menuPanel = new JPanel(new GridBagLayout());
         menuPanel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
         
@@ -53,55 +46,26 @@ public class MainMenuView extends JFrame {
         gbc.gridwidth = GridBagConstraints.REMAINDER;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(10, 10, 10, 10);        // Create buttons with icons
-        bookManagementBtn = createMenuButton("Quản Lý Sách", "icons/book.png");
-        customerManagementBtn = createMenuButton("Quản Lý Khách Hàng", "icons/customer.png");
-        orderManagementBtn = createMenuButton("Quản Lý Đơn Hàng", "icons/order.png");
-        reportBtn = createMenuButton("Thống Kê Doanh Thu", "icons/report.png");
-        userManagementBtn = createMenuButton("Quản Lý Nhân Viên", "icons/user.png"); // New button
-        logoutBtn = createMenuButton("Đăng Xuất", "icons/logout.png");
+        JButton bookManagementBtn = createMenuButton("Quản Lý Sách", "icons/book.png");
+        JButton customerManagementBtn = createMenuButton("Quản Lý Khách Hàng", "icons/customer.png");
+        JButton orderManagementBtn = createMenuButton("Quản Lý Đơn Hàng", "icons/order.png");
+        JButton reportBtn = createMenuButton("Thống Kê Doanh Thu", "icons/report.png");
 
-        // Add action listeners
-        bookManagementBtn.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                openBookManagement();
-            }
-        });
+        JButton userManagementBtn = createMenuButton("Quản Lý Nhân Viên", "icons/user.png"); // New button
+        JButton logoutBtn = createMenuButton("Đăng Xuất", "icons/logout.png");
 
-        customerManagementBtn.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                openCustomerManagement();
-            }
-        });
+        bookManagementBtn.addActionListener(_ -> openBookManagement());
 
-        orderManagementBtn.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                openOrderManagement();
-            }
-        });
+        customerManagementBtn.addActionListener(_ -> openCustomerManagement());
 
-        reportBtn.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                openReports();
-            }
-        });
+        orderManagementBtn.addActionListener(_ -> openOrderManagement());
 
-        logoutBtn.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                logout();
-            }        });
+        reportBtn.addActionListener(_ -> openReports());
+
+        logoutBtn.addActionListener(_ -> logout());
         
         // User management button action
-        userManagementBtn.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                openUserManagement();
-            }
-        });        // Add buttons to menu panel
+        userManagementBtn.addActionListener(_ -> openUserManagement());
         menuPanel.add(bookManagementBtn, gbc);
         menuPanel.add(customerManagementBtn, gbc);
         menuPanel.add(orderManagementBtn, gbc);
@@ -150,8 +114,8 @@ public class MainMenuView extends JFrame {
             button.setIcon(new ImageIcon(img));
             button.setHorizontalAlignment(SwingConstants.LEFT);
             button.setIconTextGap(20);
-        } catch (Exception e) {
-            // If icon not found, just show text
+        } catch (Exception _) {
+
         }
         
         return button;
@@ -203,7 +167,9 @@ public class MainMenuView extends JFrame {
             userView.setVisible(true);
             this.setVisible(false);
         });
-    }    private void logout() {
+    }
+
+    private void logout() {
         int confirm = JOptionPane.showConfirmDialog(
             this, 
             "Bạn có chắc chắn muốn đăng xuất?", 
@@ -212,7 +178,6 @@ public class MainMenuView extends JFrame {
         );
         
         if (confirm == JOptionPane.YES_OPTION) {
-            // Log out in the service
             UserService.getInstance().logout();
             
             SwingUtilities.invokeLater(() -> {

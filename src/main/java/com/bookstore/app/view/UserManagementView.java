@@ -2,6 +2,7 @@ package com.bookstore.app.view;
 
 import com.bookstore.app.model.User;
 import com.bookstore.app.service.UserService;
+import com.bookstore.app.controller.UserController;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -13,21 +14,22 @@ import java.awt.event.MouseEvent;
 import java.util.List;
 
 public class UserManagementView extends JFrame {
-    private MainMenuView mainMenuView;
+    private final MainMenuView mainMenuView;
     private JTable userTable;
     private DefaultTableModel tableModel;
-    private JButton addButton, editButton, deleteButton, backButton;
+    private JButton editButton;
+    private JButton deleteButton;
     private JTextField searchField;
-    private JButton searchButton;
+    private final UserController userController;
     
-    // Selected user for editing/deleting
+    // Người dùng được chọn để sửa/xóa
     private User selectedUser;
     
-    // Column names for the table
     private final String[] columnNames = {"ID", "Tên đăng nhập", "Họ tên", "Vai trò", "Trạng thái", "Ngày tạo", "Đăng nhập lần cuối"};
 
     public UserManagementView(MainMenuView mainMenuView) {
         this.mainMenuView = mainMenuView;
+        this.userController = new UserController(UserService.getInstance());
         initComponents();
         loadUserData();
     }
@@ -45,7 +47,7 @@ public class UserManagementView extends JFrame {
         // Search panel
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         searchField = new JTextField(20);
-        searchButton = new JButton("Tìm kiếm");
+        JButton searchButton = new JButton("Tìm kiếm");
         
         searchPanel.add(new JLabel("Tìm kiếm:"));
         searchPanel.add(searchField);
@@ -55,7 +57,7 @@ public class UserManagementView extends JFrame {
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return false; // Make table non-editable
+                return false;
             }
         };
         userTable = new JTable(tableModel);
@@ -65,29 +67,27 @@ public class UserManagementView extends JFrame {
         
         // Button panel
         JPanel buttonPanel = new JPanel();
-        addButton = new JButton("Thêm");
+        JButton addButton = new JButton("Thêm");
         editButton = new JButton("Sửa");
         deleteButton = new JButton("Xóa");
-        backButton = new JButton("Quay lại");
+        JButton backButton = new JButton("Quay lại");
         
         buttonPanel.add(addButton);
         buttonPanel.add(editButton);
         buttonPanel.add(deleteButton);
         buttonPanel.add(backButton);
         
-        // Add components to main panel
         mainPanel.add(searchPanel, BorderLayout.NORTH);
         mainPanel.add(scrollPane, BorderLayout.CENTER);
         mainPanel.add(buttonPanel, BorderLayout.SOUTH);
         
-        // Event listeners
         userTable.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 int selectedRow = userTable.getSelectedRow();
                 if (selectedRow >= 0) {
                     int userId = (int)userTable.getValueAt(selectedRow, 0);
-                    selectedUser = UserService.getInstance().getUserById(userId);
+                    selectedUser = userController.getUserById(userId);
                 } else {
                     selectedUser = null;
                 }
@@ -96,44 +96,21 @@ public class UserManagementView extends JFrame {
             }
         });
         
-        addButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                showUserDialog(null); // null means adding a new user
+        addButton.addActionListener(_ -> showUserDialog(null));
+        
+        editButton.addActionListener(_ -> {
+            if (selectedUser != null) {
+                showUserDialog(selectedUser);
             }
         });
         
-        editButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (selectedUser != null) {
-                    showUserDialog(selectedUser);
-                }
-            }
-        });
+        deleteButton.addActionListener(_ -> deleteUser());
         
-        deleteButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                deleteUser();
-            }
-        });
+        backButton.addActionListener(_ -> goBack());
         
-        backButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                goBack();
-            }
-        });
+        searchButton.addActionListener(_ -> searchUsers());
         
-        searchButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                searchUsers();
-            }
-        });
-        
-        // Initial button state
+        // Khởi tạo nút trạng thái
         updateButtonState();
         
         // Set app icon
@@ -150,20 +127,17 @@ public class UserManagementView extends JFrame {
     }
     
     private void updateButtonState() {
-        // Only enable edit/delete if a user is selected and it's not the current admin
         boolean userSelected = selectedUser != null;
-        boolean isSameUser = userSelected && selectedUser.getId() == UserService.getInstance().getCurrentUser().getId();
+        boolean isSameUser = userSelected && selectedUser.getId() == userController.getCurrentUser().getId();
         
         editButton.setEnabled(userSelected);
-        deleteButton.setEnabled(userSelected && !isSameUser); // Can't delete current user
+        deleteButton.setEnabled(userSelected && !isSameUser);
     }
     
     private void loadUserData() {
-        // Clear table
         tableModel.setRowCount(0);
         
-        // Load user data
-        List<User> users = UserService.getInstance().getAllUsers();
+        List<User> users = userController.getAllUsers();
         for (User user : users) {
             tableModel.addRow(new Object[] {
                 user.getId(),
@@ -184,11 +158,9 @@ public class UserManagementView extends JFrame {
             return;
         }
         
-        // Clear table
         tableModel.setRowCount(0);
         
-        // Search users and display results
-        List<User> users = UserService.getInstance().getAllUsers();
+        List<User> users = userController.getAllUsers();
         for (User user : users) {
             if (user.getUsername().toLowerCase().contains(keyword) ||
                 user.getFullName().toLowerCase().contains(keyword) ||
@@ -208,7 +180,6 @@ public class UserManagementView extends JFrame {
     }
     
     private void showUserDialog(User user) {
-        // Create a dialog to add/edit user
         JDialog dialog = new JDialog(this, user == null ? "Thêm Nhân Viên" : "Sửa Thông Tin Nhân Viên", true);
         dialog.setSize(400, 350);
         dialog.setLocationRelativeTo(this);
@@ -221,7 +192,6 @@ public class UserManagementView extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(5, 5, 5, 5);
         
-        // Username field
         gbc.gridx = 0;
         gbc.gridy = 0;
         formPanel.add(new JLabel("Tên đăng nhập:"), gbc);
@@ -233,7 +203,6 @@ public class UserManagementView extends JFrame {
         }
         formPanel.add(usernameField, gbc);
         
-        // Password field
         gbc.gridx = 0;
         gbc.gridy = 1;
         formPanel.add(new JLabel("Mật khẩu:"), gbc);
@@ -242,7 +211,6 @@ public class UserManagementView extends JFrame {
         JPasswordField passwordField = new JPasswordField(20);
         formPanel.add(passwordField, gbc);
         
-        // Full name field
         gbc.gridx = 0;
         gbc.gridy = 2;
         formPanel.add(new JLabel("Họ và tên:"), gbc);
@@ -254,7 +222,6 @@ public class UserManagementView extends JFrame {
         }
         formPanel.add(fullNameField, gbc);
         
-        // Role selection
         gbc.gridx = 0;
         gbc.gridy = 3;
         formPanel.add(new JLabel("Vai trò:"), gbc);
@@ -265,11 +232,10 @@ public class UserManagementView extends JFrame {
         if (user != null) {
             roleComboBox.setSelectedItem(user.getRole().equals(User.ROLE_ADMIN) ? "Admin" : "Nhân viên");
         } else {
-            roleComboBox.setSelectedIndex(1); // Default to staff
+            roleComboBox.setSelectedIndex(1);
         }
         formPanel.add(roleComboBox, gbc);
         
-        // Active status
         gbc.gridx = 0;
         gbc.gridy = 4;
         formPanel.add(new JLabel("Trạng thái:"), gbc);
@@ -279,7 +245,6 @@ public class UserManagementView extends JFrame {
         activeCheckBox.setSelected(user == null || user.isActive());
         formPanel.add(activeCheckBox, gbc);
         
-        // Button panel
         JPanel buttonPanel = new JPanel();
         JButton saveButton = new JButton("Lưu");
         JButton cancelButton = new JButton("Hủy");
@@ -287,7 +252,6 @@ public class UserManagementView extends JFrame {
         buttonPanel.add(saveButton);
         buttonPanel.add(cancelButton);
         
-        // Add components to dialog
         dialog.add(formPanel, BorderLayout.CENTER);
         dialog.add(buttonPanel, BorderLayout.SOUTH);
         
@@ -317,11 +281,11 @@ public class UserManagementView extends JFrame {
                     return;
                 }
                 
-                // Create or update user
+                // Tạo hoặc cập nhật người dùng
                 if (user == null) {
-                    // Create new user
+                    // Tạo người dùng mới
                     User newUser = new User(username, password, fullName, role, active);
-                    if (UserService.getInstance().addUser(newUser)) {
+                    if (userController.addUser(newUser)) {
                         JOptionPane.showMessageDialog(dialog, "Thêm nhân viên thành công", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
                         dialog.dispose();
                         loadUserData();
@@ -329,9 +293,8 @@ public class UserManagementView extends JFrame {
                         JOptionPane.showMessageDialog(dialog, "Tên đăng nhập đã tồn tại hoặc có lỗi khác xảy ra", "Lỗi", JOptionPane.ERROR_MESSAGE);
                     }
                 } else {
-                    // Update existing user
+                    // Cập nhật người dùng hiện tại
                     user.setUsername(username);
-                    // Only update password if a new one is provided
                     if (!password.isEmpty()) {
                         user.setPassword(password);
                     }
@@ -339,7 +302,7 @@ public class UserManagementView extends JFrame {
                     user.setRole(role);
                     user.setActive(active);
                     
-                    if (UserService.getInstance().updateUser(user)) {
+                    if (userController.updateUser(user)) {
                         JOptionPane.showMessageDialog(dialog, "Cập nhật thông tin thành công", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
                         dialog.dispose();
                         loadUserData();
@@ -357,7 +320,6 @@ public class UserManagementView extends JFrame {
             }
         });
         
-        // Show dialog
         dialog.setVisible(true);
     }
     
@@ -366,13 +328,11 @@ public class UserManagementView extends JFrame {
             return;
         }
         
-        // Check if it's the current user
-        if (selectedUser.getId() == UserService.getInstance().getCurrentUser().getId()) {
+        if (selectedUser.getId() == userController.getCurrentUser().getId()) {
             JOptionPane.showMessageDialog(this, "Không thể xóa tài khoản đang đăng nhập", "Lỗi", JOptionPane.ERROR_MESSAGE);
             return;
         }
         
-        // Confirm deletion
         int confirm = JOptionPane.showConfirmDialog(
             this,
             "Bạn có chắc chắn muốn xóa người dùng " + selectedUser.getUsername() + "?",
@@ -381,7 +341,7 @@ public class UserManagementView extends JFrame {
         );
         
         if (confirm == JOptionPane.YES_OPTION) {
-            if (UserService.getInstance().deleteUser(selectedUser.getId())) {
+            if (userController.deleteUser(selectedUser.getId())) {
                 JOptionPane.showMessageDialog(this, "Xóa người dùng thành công", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
                 selectedUser = null;
                 loadUserData();

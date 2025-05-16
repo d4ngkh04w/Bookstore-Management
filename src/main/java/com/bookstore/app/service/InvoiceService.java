@@ -6,7 +6,6 @@ import com.bookstore.app.model.Book;
 import com.bookstore.app.model.Invoice;
 import com.bookstore.app.model.InvoiceItem;
 
-import java.util.Date;
 import java.util.List;
 
 public class InvoiceService {
@@ -33,37 +32,38 @@ public class InvoiceService {
     public Invoice getInvoiceById(int id) {
         return invoiceDAO.getInvoiceById(id);
     }
-      public List<InvoiceItem> getInvoiceItems(int invoiceId) {
+
+    public List<InvoiceItem> getInvoiceItems(int invoiceId) {
         return invoiceDAO.getInvoiceItems(invoiceId);
     }
     
     public List<InvoiceItem> getInvoiceItemsByInvoiceId(int invoiceId) {
         return invoiceDAO.getInvoiceItems(invoiceId);
     }
-      public int createInvoice(Invoice invoice, List<InvoiceItem> items) {
+
+    public int createInvoice(Invoice invoice, List<InvoiceItem> items) {
         if (items == null || items.isEmpty()) {
             return -1;
         }
-        
-        // Update book quantities
+
         for (InvoiceItem item : items) {
             Book book = null;
             
             try {
                 book = bookDAO.getBookById(item.getBookId());
                   if (book == null || book.getQuantity() < item.getQuantity()) {
-                    return -1; // Not enough stock
+                    return -1;
                 }
-                
-                // Update book quantity
+
                 book.setQuantity(book.getQuantity() - item.getQuantity());
                 bookDAO.updateBook(book);
                 
             } catch (Exception e) {
-                e.printStackTrace();
+                System.out.println(e.getMessage());
                 return -1;
-            }        }
-          // Add invoice and items
+            }
+        }
+
         int newInvoiceId = invoiceDAO.addInvoice(invoice, items);
         if (newInvoiceId > 0) {
             return newInvoiceId;
@@ -72,10 +72,8 @@ public class InvoiceService {
     }
     
     public boolean deleteInvoice(int id) {
-        // Get invoice items first to restore book quantities
         List<InvoiceItem> items = invoiceDAO.getInvoiceItems(id);
-        
-        // Restore book quantities
+
         for (InvoiceItem item : items) {
             try {
                 Book book = bookDAO.getBookById(item.getBookId());
@@ -85,12 +83,11 @@ public class InvoiceService {
                     bookDAO.updateBook(book);
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                System.out.println(e.getMessage());
                 return false;
             }
         }
-        
-        // Delete invoice
+
         return invoiceDAO.deleteInvoice(id);
     }
 }

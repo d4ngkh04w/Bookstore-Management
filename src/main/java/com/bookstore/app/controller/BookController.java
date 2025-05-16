@@ -1,38 +1,35 @@
 package com.bookstore.app.controller;
 
-import com.bookstore.app.dao.BookDAO;
 import com.bookstore.app.model.Book;
-import com.bookstore.app.view.BookManagementView;
+import com.bookstore.app.service.BookService;
 
 import java.util.List;
 
 public class BookController {
-    private BookDAO bookDAO;
-    private Object viewObject;
+    private final BookService bookService;
       
-    public BookController(Object view, BookDAO dao) {
-        this.viewObject = view;
-        this.bookDAO = dao;
+    public BookController(BookService service) {
+        this.bookService = service;
     }
       
     public List<Book> getAllBooks() {
-        return bookDAO.getAllBooks();
+        return bookService.getAllBooks();
     }
     
     public Book getBookById(int id) {
-        return bookDAO.getBookById(id);
+        return bookService.getBookById(id);
     }
     
-    public boolean addBook(Book book) {
-        return bookDAO.addBook(book);
+    public void addBook(Book book) {
+        bookService.addBook(book);
     }
     
-    public boolean updateBook(Book book) {
-        return bookDAO.updateBook(book);
+    public void updateBook(Book book) {
+        bookService.updateBook(book);
     }
     
-    public boolean deleteBook(int id) {
-        return bookDAO.deleteBook(id);
+    public void deleteBook(int id) {
+        bookService.deleteBook(id);
     }    
 }
 

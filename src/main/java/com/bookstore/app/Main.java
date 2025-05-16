@@ -12,18 +12,16 @@ import java.awt.*;
 
 public class Main {
     public static void main(String[] args) {
-        // Initialize the database first
+        // Khởi tạo db
         DatabaseInitializer.initializeDatabase();
         
-        SwingUtilities.invokeLater(() -> {            try {
-                // Set look and feel to system default
+        SwingUtilities.invokeLater(() -> {
+            try {
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-                
-                // Set system properties for UTF-8 encoding
+
                 System.setProperty("file.encoding", "UTF-8");
                 System.setProperty("sun.jnu.encoding", "UTF-8");
-                
-                // Set font for Vietnamese
+
                 Font defaultFont = new Font("Arial", Font.PLAIN, 14);
                 UIManager.put("Button.font", defaultFont);
                 UIManager.put("Label.font", defaultFont);
@@ -38,18 +36,16 @@ public class Main {
                 UIManager.put("MenuItem.font", defaultFont);
                 
             } catch (Exception e) {
-                e.printStackTrace();
+                System.out.println(e.getMessage());
             }
-              // Initialize services
+
             BookService.getInstance();
             CustomerService.getInstance();
             InvoiceService.getInstance();
             UserService.getInstance();
-            
-            // Create the login view
+
             LoginView loginView = new LoginView();
-            
-            // Set application icon
+
             try {
                 Image appIcon = new ImageIcon(
                     Main.class.getClassLoader().getResource("icons/logo.png")
@@ -58,8 +54,9 @@ public class Main {
             } catch (Exception e) {
                 System.out.println("App icon not found");
             }
-              // Show the login form
+            
             loginView.setVisible(true);
+            loginView.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         });
     }
 }

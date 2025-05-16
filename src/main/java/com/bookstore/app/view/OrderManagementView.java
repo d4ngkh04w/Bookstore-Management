@@ -1,5 +1,8 @@
 package com.bookstore.app.view;
 
+import com.bookstore.app.controller.BookController;
+import com.bookstore.app.controller.CustomerController;
+import com.bookstore.app.controller.InvoiceController;
 import com.bookstore.app.model.Book;
 import com.bookstore.app.model.Customer;
 import com.bookstore.app.model.Invoice;
@@ -19,14 +22,13 @@ import java.util.Date;
 import java.util.List;
 
 public class OrderManagementView extends JFrame {
-    private MainMenuView mainMenu;
-    private BookService bookService;
-    private CustomerService customerService;
-    private InvoiceService invoiceService;
+    private final MainMenuView mainMenuView;
+    private final BookController bookController;
+    private final CustomerController customerController;
+    private final InvoiceController invoiceController;
 
     private JTable invoiceTable;
     private DefaultTableModel invoiceTableModel;
-    private JTable invoiceItemTable;
     private DefaultTableModel invoiceItemTableModel;
     private JTable cartTable;
     private DefaultTableModel cartTableModel;
@@ -36,13 +38,13 @@ public class OrderManagementView extends JFrame {
     private JSpinner quantitySpinner;
     private JLabel totalLabel;
 
-    private List<InvoiceItem> cartItems = new ArrayList<>();
+    private final List<InvoiceItem> cartItems = new ArrayList<>();
 
-    public OrderManagementView(MainMenuView mainMenu) {
-        this.mainMenu = mainMenu;
-        this.bookService = BookService.getInstance();
-        this.customerService = CustomerService.getInstance();
-        this.invoiceService = InvoiceService.getInstance();
+    public OrderManagementView(MainMenuView mainMenuView) {
+        this.mainMenuView = mainMenuView;
+        this.bookController = new BookController(BookService.getInstance());
+        this.customerController = new CustomerController(CustomerService.getInstance());
+        this.invoiceController = new InvoiceController(InvoiceService.getInstance());
         initComponents();
         loadInvoiceData();
     }
@@ -55,10 +57,8 @@ public class OrderManagementView extends JFrame {
 
         JTabbedPane tabbedPane = new JTabbedPane();
 
-        // Create Invoice History Panel
         tabbedPane.addTab("Lịch Sử Đơn Hàng", createInvoiceHistoryPanel());
 
-        // Create New Order Panel
         tabbedPane.addTab("Tạo Đơn Hàng Mới", createNewOrderPanel());
 
         add(tabbedPane);
@@ -78,7 +78,6 @@ public class OrderManagementView extends JFrame {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // Invoice table
         String[] invoiceColumns = {"ID", "Khách Hàng", "Ngày", "Tổng Tiền"};
         invoiceTableModel = new DefaultTableModel(invoiceColumns, 0) {
             @Override
@@ -99,7 +98,6 @@ public class OrderManagementView extends JFrame {
             }
         });
 
-        // Invoice items table
         String[] itemColumns = {"Sách", "Đơn Giá", "Số Lượng", "Thành Tiền"};
         invoiceItemTableModel = new DefaultTableModel(itemColumns, 0) {
             @Override
@@ -108,10 +106,9 @@ public class OrderManagementView extends JFrame {
             }
         };
 
-        invoiceItemTable = new JTable(invoiceItemTableModel);
+        JTable invoiceItemTable = new JTable(invoiceItemTableModel);
         invoiceItemTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        // Create split pane for invoice and items
         JSplitPane splitPane = new JSplitPane(
             JSplitPane.VERTICAL_SPLIT,
             new JScrollPane(invoiceTable),
@@ -239,7 +236,6 @@ public class OrderManagementView extends JFrame {
         buttonPanel.add(backButton);
         panel.add(buttonPanel, BorderLayout.SOUTH);
 
-        // Load data
         loadCustomers();
         loadBooks();
 
@@ -250,12 +246,12 @@ public class OrderManagementView extends JFrame {
         invoiceTableModel.setRowCount(0);
         invoiceItemTableModel.setRowCount(0);
         
-        List<Invoice> invoices = invoiceService.getAllInvoices();
+        List<Invoice> invoices = invoiceController.getAllInvoices();
         DecimalFormat df = new DecimalFormat("#,### VNĐ");
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
         
         for (Invoice invoice : invoices) {
-            Customer customer = customerService.getCustomerById(invoice.getCustomerId());
+            Customer customer = customerController.getCustomerById(invoice.getCustomerId());
             String customerName = customer != null ? customer.getName() : "Unknown";
             
             invoiceTableModel.addRow(new Object[]{
@@ -270,11 +266,11 @@ public class OrderManagementView extends JFrame {
     private void loadInvoiceItems(int invoiceId) {
         invoiceItemTableModel.setRowCount(0);
         
-        List<InvoiceItem> items = invoiceService.getInvoiceItemsByInvoiceId(invoiceId);
+        List<InvoiceItem> items = invoiceController.getInvoiceItemsByInvoiceId(invoiceId);
         DecimalFormat df = new DecimalFormat("#,### VNĐ");
         
         for (InvoiceItem item : items) {
-            Book book = bookService.getBookById(item.getBookId());
+            Book book = bookController.getBookById(item.getBookId());
             String bookTitle = book != null ? book.getTitle() : "Unknown";
             
             invoiceItemTableModel.addRow(new Object[]{
@@ -288,7 +284,7 @@ public class OrderManagementView extends JFrame {
     
     private void loadCustomers() {
         DefaultComboBoxModel<Customer> customerModel = new DefaultComboBoxModel<>();
-        List<Customer> customers = customerService.getAllCustomers();
+        List<Customer> customers = customerController.getAllCustomers();
         
         for (Customer customer : customers) {
             customerModel.addElement(customer);
@@ -299,10 +295,10 @@ public class OrderManagementView extends JFrame {
     
     private void loadBooks() {
         DefaultComboBoxModel<Book> bookModel = new DefaultComboBoxModel<>();
-        List<Book> books = bookService.getAllBooks();
+        List<Book> books = bookController.getAllBooks();
         
         for (Book book : books) {
-            if (book.getQuantity() > 0) { // Only show books in stock
+            if (book.getQuantity() > 0) {
                 bookModel.addElement(book);
             }
         }
@@ -327,16 +323,13 @@ public class OrderManagementView extends JFrame {
             );
             return;
         }
-        
-        // Check if book already in cart
+
         for (InvoiceItem item : cartItems) {
             if (item.getBookId() == selectedBook.getId()) {
-                // Update quantity if possible
                 int newQuantity = item.getQuantity() + quantity;
                 if (newQuantity <= selectedBook.getQuantity()) {
                     item.setQuantity(newQuantity);
                     updateCartTable();
-                    return;
                 } else {
                     JOptionPane.showMessageDialog(
                         this, 
@@ -344,12 +337,11 @@ public class OrderManagementView extends JFrame {
                         "Lỗi", 
                         JOptionPane.ERROR_MESSAGE
                     );
-                    return;
                 }
+                return;
             }
         }
-        
-        // Add new item to cart
+
         InvoiceItem item = new InvoiceItem();
         item.setBookId(selectedBook.getId());
         item.setQuantity(quantity);
@@ -379,7 +371,7 @@ public class OrderManagementView extends JFrame {
         DecimalFormat df = new DecimalFormat("#,##0 VNĐ");
         
         for (InvoiceItem item : cartItems) {
-            Book book = bookService.getBookById(item.getBookId());
+            Book book = bookController.getBookById(item.getBookId());
             String bookTitle = book != null ? book.getTitle() : "Unknown";
             double subtotal = item.getUnitPrice() * item.getQuantity();
             
@@ -407,8 +399,7 @@ public class OrderManagementView extends JFrame {
             JOptionPane.showMessageDialog(this, "Vui lòng chọn khách hàng!", "Lỗi", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        
-        // Create new invoice
+
         Invoice invoice = new Invoice();
         invoice.setCustomerId(selectedCustomer.getId());
         invoice.setDate(new Date());
@@ -418,16 +409,14 @@ public class OrderManagementView extends JFrame {
             totalAmount += item.getUnitPrice() * item.getQuantity();
         }
         invoice.setTotalAmount(totalAmount);
-        
-        // Save invoice and its items
-        int invoiceId = invoiceService.createInvoice(invoice, cartItems);
+
+        int invoiceId = invoiceController.createInvoice(invoice, cartItems);
         
         if (invoiceId > 0) {
-            // Update book quantities
             for (InvoiceItem item : cartItems) {
-                Book book = bookService.getBookById(item.getBookId());
+                Book book = bookController.getBookById(item.getBookId());
                 book.setQuantity(book.getQuantity() - item.getQuantity());
-                bookService.updateBook(book);
+                bookController.updateBook(book);
             }
             
             JOptionPane.showMessageDialog(this, "Đơn hàng đã được tạo thành công!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
@@ -441,6 +430,6 @@ public class OrderManagementView extends JFrame {
     
     private void returnToMainMenu() {
         this.dispose();
-        mainMenu.setVisible(true);
+        mainMenuView.setVisible(true);
     }
 }

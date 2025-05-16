@@ -1,5 +1,7 @@
 package com.bookstore.app.view;
 
+import com.bookstore.app.controller.BookController;
+import com.bookstore.app.controller.InvoiceController;
 import com.bookstore.app.model.Invoice;
 import com.bookstore.app.model.InvoiceItem;
 import com.bookstore.app.service.BookService;
@@ -16,26 +18,24 @@ import java.util.*;
 import java.util.List;
 
 public class ReportsView extends JFrame {
-    private MainMenuView mainMenu;
-    private InvoiceService invoiceService;
-    private BookService bookService;
+    private final MainMenuView mainMenu;
+    private final InvoiceController invoiceController;
+    private final BookController bookController;
 
     private JTable dailyReportTable;
     private DefaultTableModel dailyReportTableModel;
-    private JTable monthlyReportTable;
     private DefaultTableModel monthlyReportTableModel;
-    private JTable topBooksTable;
     private DefaultTableModel topBooksTableModel;
 
     private JComboBox<Integer> yearComboBox;
     private JComboBox<String> monthComboBox;
 
-    private DecimalFormat currencyFormat = new DecimalFormat("#,### VNĐ");
+    private final DecimalFormat currencyFormat = new DecimalFormat("#,### VNĐ");
 
     public ReportsView(MainMenuView mainMenu) {
         this.mainMenu = mainMenu;
-        this.invoiceService = InvoiceService.getInstance();
-        this.bookService = BookService.getInstance();
+        this.invoiceController = new InvoiceController(InvoiceService.getInstance());
+        this.bookController = new BookController(BookService.getInstance());
         initComponents();
         loadReportData();
     }
@@ -57,7 +57,7 @@ public class ReportsView extends JFrame {
             TitledBorder.LEFT, TitledBorder.TOP
         ));
 
-        // Create year combo box with last 5 years
+        // Tạo combo box 5 năm gần nhất
         int currentYear = Calendar.getInstance().get(Calendar.YEAR);
         Integer[] years = new Integer[5];
         for (int i = 0; i < 5; i++) {
@@ -65,7 +65,6 @@ public class ReportsView extends JFrame {
         }
         yearComboBox = new JComboBox<>(years);
 
-        // Create month combo box
         String[] months = {
             "Tất cả các tháng", "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", 
             "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"
@@ -83,7 +82,6 @@ public class ReportsView extends JFrame {
         filterPanel.add(Box.createRigidArea(new Dimension(10, 0)));
         filterPanel.add(filterButton);
 
-        // Back button
         JButton backButton = new JButton("Quay Lại Menu Chính");
         backButton.addActionListener(e -> returnToMainMenu());
         JPanel backButtonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -94,18 +92,14 @@ public class ReportsView extends JFrame {
         topPanel.add(backButtonPanel, BorderLayout.EAST);
         mainPanel.add(topPanel, BorderLayout.NORTH);
 
-        // Tabbed pane for reports
         JTabbedPane tabbedPane = new JTabbedPane();
-        
-        // Daily report panel
+
         JPanel dailyReportPanel = createDailyReportPanel();
         tabbedPane.addTab("Báo Cáo Theo Ngày", dailyReportPanel);
-        
-        // Monthly report panel
+
         JPanel monthlyReportPanel = createMonthlyReportPanel();
         tabbedPane.addTab("Báo Cáo Theo Tháng", monthlyReportPanel);
-        
-        // Top selling books panel
+
         JPanel topBooksPanel = createTopBooksPanel();
         tabbedPane.addTab("Sách Bán Chạy", topBooksPanel);
         
@@ -128,7 +122,6 @@ public class ReportsView extends JFrame {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // Create table model
         String[] columns = {"Ngày", "Số Đơn Hàng", "Doanh Thu"};
         dailyReportTableModel = new DefaultTableModel(columns, 0) {
             @Override
@@ -138,8 +131,8 @@ public class ReportsView extends JFrame {
         };
         
         dailyReportTable = new JTable(dailyReportTableModel);
-        
-        // Center align for all columns except the first one (date)
+
+        // Căn giữa cho tất cả các cột ngoại trừ cột đầu tiên (ngày)
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
         centerRenderer.setHorizontalAlignment(JLabel.CENTER);
         for (int i = 1; i < dailyReportTable.getColumnCount(); i++) {
@@ -163,7 +156,6 @@ public class ReportsView extends JFrame {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // Create table model
         String[] columns = {"Tháng", "Số Đơn Hàng", "Doanh Thu"};
         monthlyReportTableModel = new DefaultTableModel(columns, 0) {
             @Override
@@ -171,10 +163,10 @@ public class ReportsView extends JFrame {
                 return false;
             }
         };
-        
-        monthlyReportTable = new JTable(monthlyReportTableModel);
-        
-        // Center align for all columns except the first one (month)
+
+        JTable monthlyReportTable = new JTable(monthlyReportTableModel);
+
+        // Căn giữa cho tất cả các cột ngoại trừ cột đầu tiên (tháng)
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
         centerRenderer.setHorizontalAlignment(JLabel.CENTER);
         for (int i = 1; i < monthlyReportTable.getColumnCount(); i++) {
@@ -183,8 +175,7 @@ public class ReportsView extends JFrame {
         
         JScrollPane scrollPane = new JScrollPane(monthlyReportTable);
         panel.add(scrollPane, BorderLayout.CENTER);
-        
-        // Chart panel (placeholder for future chart implementation)
+
         JPanel chartPanel = new JPanel();
         chartPanel.setPreferredSize(new Dimension(0, 200));
         chartPanel.setBorder(BorderFactory.createTitledBorder(
@@ -203,7 +194,6 @@ public class ReportsView extends JFrame {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // Create table model
         String[] columns = {"STT", "Tên Sách", "Số Lượng Đã Bán", "Doanh Thu"};
         topBooksTableModel = new DefaultTableModel(columns, 0) {
             @Override
@@ -211,10 +201,9 @@ public class ReportsView extends JFrame {
                 return false;
             }
         };
-        
-        topBooksTable = new JTable(topBooksTableModel);
-        
-        // Center align for columns except the book title
+
+        JTable topBooksTable = new JTable(topBooksTableModel);
+
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
         centerRenderer.setHorizontalAlignment(JLabel.CENTER);
         topBooksTable.getColumnModel().getColumn(0).setCellRenderer(centerRenderer); // STT
@@ -228,15 +217,13 @@ public class ReportsView extends JFrame {
 
     private void loadReportData() {
         int selectedYear = (int) yearComboBox.getSelectedItem();
-        int selectedMonth = monthComboBox.getSelectedIndex(); // 0 means all months
-        
-        // Load all invoices for the selected year
-        List<Invoice> invoices = invoiceService.getAllInvoices();
+        int selectedMonth = monthComboBox.getSelectedIndex(); // 0 có nghĩa là tất cả các tháng
+
+        List<Invoice> invoices = invoiceController.getAllInvoices();
         List<Invoice> filteredInvoices = new ArrayList<>();
         
         Calendar calendar = Calendar.getInstance();
-        
-        // Filter invoices by year and month
+
         for (Invoice invoice : invoices) {
             calendar.setTime(invoice.getDate());
             int invoiceYear = calendar.get(Calendar.YEAR);
@@ -254,8 +241,7 @@ public class ReportsView extends JFrame {
     
     private void loadDailyReport(List<Invoice> invoices) {
         dailyReportTableModel.setRowCount(0);
-        
-        // Group invoices by date
+
         Map<String, List<Invoice>> invoicesByDate = new HashMap<>();
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
         
@@ -269,7 +255,7 @@ public class ReportsView extends JFrame {
         
         // Sort dates
         List<String> dates = new ArrayList<>(invoicesByDate.keySet());
-        Collections.sort(dates, (d1, d2) -> {
+        dates.sort((d1, d2) -> {
             try {
                 return dateFormat.parse(d1).compareTo(dateFormat.parse(d2));
             } catch (Exception e) {
@@ -277,10 +263,10 @@ public class ReportsView extends JFrame {
             }
         });
         
-        // Calculate total revenue
+        // Tổng doanh thu
         double totalRevenue = 0;
         
-        // Add data to table model
+        // Add data
         for (String date : dates) {
             List<Invoice> dateInvoices = invoicesByDate.get(date);
             int orderCount = dateInvoices.size();
@@ -298,10 +284,9 @@ public class ReportsView extends JFrame {
                 currencyFormat.format(revenue)
             });
         }
-        
-        // Update total label if exists
-        if (dailyReportTable.getParent().getParent() instanceof JPanel) {
-            JPanel panel = (JPanel) dailyReportTable.getParent().getParent();
+
+        // Cập nhật tổng doanh thu
+        if (dailyReportTable.getParent().getParent() instanceof JPanel panel) {
             Component[] components = panel.getComponents();
             for (Component c : components) {
                 if (c instanceof JPanel && ((JPanel) c).getComponentCount() > 0) {
@@ -320,13 +305,11 @@ public class ReportsView extends JFrame {
     private void loadMonthlyReport(int year) {
         monthlyReportTableModel.setRowCount(0);
         
-        List<Invoice> allInvoices = invoiceService.getAllInvoices();
-        
-        // Initialize monthly data
+        List<Invoice> allInvoices = invoiceController.getAllInvoices();
+
         int[] orderCounts = new int[12];
         double[] revenues = new double[12];
-        
-        // Group invoices by month
+
         Calendar calendar = Calendar.getInstance();
         for (Invoice invoice : allInvoices) {
             calendar.setTime(invoice.getDate());
@@ -338,8 +321,7 @@ public class ReportsView extends JFrame {
                 revenues[invoiceMonth] += invoice.getTotalAmount();
             }
         }
-        
-        // Add data to table model
+
         String[] monthNames = {
             "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", 
             "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"
@@ -358,14 +340,12 @@ public class ReportsView extends JFrame {
     
     private void loadTopBooks(List<Invoice> invoices) {
         topBooksTableModel.setRowCount(0);
-        
-        // Get all invoice items from the filtered invoices
+
         List<InvoiceItem> allItems = new ArrayList<>();
         for (Invoice invoice : invoices) {
-            allItems.addAll(invoiceService.getInvoiceItemsByInvoiceId(invoice.getId()));
+            allItems.addAll(invoiceController.getInvoiceItemsByInvoiceId(invoice.getId()));
         }
-        
-        // Group items by book ID
+
         Map<Integer, Integer> bookQuantities = new HashMap<>();
         Map<Integer, Double> bookRevenues = new HashMap<>();
         
@@ -377,20 +357,20 @@ public class ReportsView extends JFrame {
             bookQuantities.put(bookId, bookQuantities.getOrDefault(bookId, 0) + quantity);
             bookRevenues.put(bookId, bookRevenues.getOrDefault(bookId, 0.0) + revenue);
         }
-        
-        // Sort books by quantity sold (descending)
-        List<Map.Entry<Integer, Integer>> sortedEntries = new ArrayList<>(bookQuantities.entrySet());
-        sortedEntries.sort((e1, e2) -> e2.getValue().compareTo(e1.getValue()));
-        
-        // Add top books to table model (limit to top 10)
+
+        List<Map.Entry<Integer, Integer>> sortedBooks = new ArrayList<>(bookQuantities.entrySet());
+        sortedBooks.sort((e1, e2) -> e2.getValue().compareTo(e1.getValue()));
+
+        // Hiển thị tối đa 10 sách
         int count = 0;
-        for (Map.Entry<Integer, Integer> entry : sortedEntries) {
-            if (count >= 10) break;
-            
+        int limit = Math.min(sortedBooks.size(), 10);
+        
+        for (int i = 0; i < limit; i++) {
+            Map.Entry<Integer, Integer> entry = sortedBooks.get(i);
             int bookId = entry.getKey();
             int quantity = entry.getValue();
             double revenue = bookRevenues.get(bookId);
-            String bookTitle = bookService.getBookById(bookId).getTitle();
+            String bookTitle = bookController.getBookById(bookId).getTitle();
             
             topBooksTableModel.addRow(new Object[]{
                 count + 1,

@@ -1,34 +1,31 @@
 package com.bookstore.app.view;
 
 import com.bookstore.app.controller.BookController;
-import com.bookstore.app.dao.BookDAO;
 import com.bookstore.app.model.Book;
 import com.bookstore.app.dao.CategoryDAO;
+import com.bookstore.app.service.BookService;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.List;
 
 public class BookManagementView extends JFrame {
-    private MainMenuView mainMenu;
+    private final MainMenuView mainMenu;
     private JTable bookTable;
     private DefaultTableModel tableModel;
-    private JButton addButton, editButton, deleteButton, backButton;
     private JTextField searchField;
     private JComboBox<String> searchTypeComboBox;
-    private BookController bookController;
-    private CategoryDAO categoryDAO;
+    private final BookController bookController;
+    private final CategoryDAO categoryDAO;
 
     public BookManagementView(MainMenuView mainMenu) {
         this.mainMenu = mainMenu;
-        this.bookController = new BookController(this, new BookDAO());
+        this.bookController = new BookController(BookService.getInstance());
         this.categoryDAO = new CategoryDAO();
         initComponents();
         loadBookData();
@@ -40,11 +37,9 @@ public class BookManagementView extends JFrame {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        // Main panel with BorderLayout
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // North panel for search functionality
         JPanel searchPanel = new JPanel(new BorderLayout(5, 0));
         searchPanel.setBorder(BorderFactory.createTitledBorder(
             BorderFactory.createEtchedBorder(), "Tìm Kiếm", 
@@ -63,16 +58,14 @@ public class BookManagementView extends JFrame {
 
         searchPanel.add(searchControlsPanel, BorderLayout.CENTER);
 
-        // Create Back button in the search panel
-        backButton = new JButton("Quay Lại Menu Chính");
-        backButton.addActionListener(e -> returnToMainMenu());
+        JButton backButton = new JButton("Quay Lại Menu Chính");
+        backButton.addActionListener(_ -> returnToMainMenu());
         JPanel backButtonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         backButtonPanel.add(backButton);
         searchPanel.add(backButtonPanel, BorderLayout.EAST);
 
         mainPanel.add(searchPanel, BorderLayout.NORTH);
 
-        // Table model with column names in Vietnamese
         String[] columnNames = {"ID", "Tên Sách", "Tác Giả", "Thể Loại", "Giá", "Số Lượng"};
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
@@ -88,7 +81,6 @@ public class BookManagementView extends JFrame {
             }
         };
 
-        // Create book table and scroll pane
         bookTable = new JTable(tableModel);
         bookTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         bookTable.setAutoCreateRowSorter(true);
@@ -104,12 +96,11 @@ public class BookManagementView extends JFrame {
         JScrollPane scrollPane = new JScrollPane(bookTable);
         mainPanel.add(scrollPane, BorderLayout.CENTER);
 
-        // Button panel at the bottom
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
 
-        addButton = new JButton("Thêm Sách");
-        editButton = new JButton("Sửa Sách");
-        deleteButton = new JButton("Xóa Sách");
+        JButton addButton = new JButton("Thêm Sách");
+        JButton editButton = new JButton("Sửa Sách");
+        JButton deleteButton = new JButton("Xóa Sách");
 
         buttonPanel.add(addButton);
         buttonPanel.add(editButton);
@@ -118,9 +109,9 @@ public class BookManagementView extends JFrame {
         mainPanel.add(buttonPanel, BorderLayout.SOUTH);
 
         // Add action listeners
-        addButton.addActionListener(e -> showAddBookDialog());
-        editButton.addActionListener(e -> showEditBookDialog());
-        deleteButton.addActionListener(e -> deleteSelectedBook());
+        addButton.addActionListener(_ -> showAddBookDialog());
+        editButton.addActionListener(_ -> showEditBookDialog());
+        deleteButton.addActionListener(_ -> deleteSelectedBook());
 
         searchButton.addActionListener(e -> searchBooks());
         searchField.addKeyListener(new KeyAdapter() {
@@ -146,10 +137,8 @@ public class BookManagementView extends JFrame {
     }
 
     public void loadBookData() {
-        // Clear the table
         tableModel.setRowCount(0);
-        
-        // Get all books and add to the table model
+
         List<Book> books = bookController.getAllBooks();
         for (Book book : books) {
             tableModel.addRow(new Object[]{
@@ -167,17 +156,16 @@ public class BookManagementView extends JFrame {
         String searchTerm = searchField.getText().trim();
         if (searchTerm.isEmpty()) {
             loadBookData();
-            bookTable.setRowSorter(null); // Reset sorter to show all data
+            bookTable.setRowSorter(null);
             return;
         }
         
         int searchType = searchTypeComboBox.getSelectedIndex();
         TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(tableModel);
         bookTable.setRowSorter(sorter);
-        
-        // Filter based on selected search type
+
         // 0: Title, 1: Author, 2: Category
-        int columnToSearch = searchType + 1; // +1 because column 0 is ID
+        int columnToSearch = searchType + 1;
         
         sorter.setRowFilter(RowFilter.regexFilter("(?i)" + searchTerm, columnToSearch));
     }
@@ -193,8 +181,7 @@ public class BookManagementView extends JFrame {
 
         JTextField titleField = new JTextField();
         JTextField authorField = new JTextField();
-        
-        // Get categories for dropdown
+
         List<String> categories = categoryDAO.getAllCategoryNames();
         JComboBox<String> categoryComboBox = new JComboBox<>(categories.toArray(new String[0]));
         
@@ -222,38 +209,35 @@ public class BookManagementView extends JFrame {
         dialog.add(formPanel, BorderLayout.CENTER);
         dialog.add(buttonPanel, BorderLayout.SOUTH);
 
-        saveButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    String title = titleField.getText().trim();
-                    String author = authorField.getText().trim();
-                    String category = (String) categoryComboBox.getSelectedItem();
-                    double price = Double.parseDouble(priceField.getText().trim());
-                    int quantity = Integer.parseInt(quantityField.getText().trim());
+        saveButton.addActionListener(_ -> {
+            try {
+                String title = titleField.getText().trim();
+                String author = authorField.getText().trim();
+                String category = (String) categoryComboBox.getSelectedItem();
+                double price = Double.parseDouble(priceField.getText().trim());
+                int quantity = Integer.parseInt(quantityField.getText().trim());
 
-                    if (title.isEmpty() || author.isEmpty()) {
-                        JOptionPane.showMessageDialog(dialog, "Vui lòng nhập đầy đủ thông tin!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-                        return;
-                    }
-
-                    Book newBook = new Book();
-                    newBook.setTitle(title);
-                    newBook.setAuthor(author);
-                    newBook.setCategory(category);
-                    newBook.setPrice(price);
-                    newBook.setQuantity(quantity);
-
-                    bookController.addBook(newBook);
-                    dialog.dispose();
-                    loadBookData();
-                } catch (NumberFormatException ex) {
-                    JOptionPane.showMessageDialog(dialog, "Giá và số lượng phải là số!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                if (title.isEmpty() || author.isEmpty()) {
+                    JOptionPane.showMessageDialog(dialog, "Vui lòng nhập đầy đủ thông tin!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
+
+                Book newBook = new Book();
+                newBook.setTitle(title);
+                newBook.setAuthor(author);
+                newBook.setCategory(category);
+                newBook.setPrice(price);
+                newBook.setQuantity(quantity);
+
+                bookController.addBook(newBook);
+                dialog.dispose();
+                loadBookData();
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dialog, "Giá và số lượng phải là số!", "Lỗi", JOptionPane.ERROR_MESSAGE);
             }
         });
 
-        cancelButton.addActionListener(e -> dialog.dispose());
+        cancelButton.addActionListener(_ -> dialog.dispose());
         dialog.setVisible(true);
     }
 
@@ -264,7 +248,6 @@ public class BookManagementView extends JFrame {
             return;
         }
 
-        // Convert row index if table is sorted
         int modelRow = bookTable.getRowSorter() != null 
             ? bookTable.getRowSorter().convertRowIndexToModel(selectedRow) 
             : selectedRow;
@@ -287,8 +270,7 @@ public class BookManagementView extends JFrame {
 
         JTextField titleField = new JTextField(book.getTitle());
         JTextField authorField = new JTextField(book.getAuthor());
-        
-        // Get categories for dropdown
+
         List<String> categories = categoryDAO.getAllCategoryNames();
         JComboBox<String> categoryComboBox = new JComboBox<>(categories.toArray(new String[0]));
         categoryComboBox.setSelectedItem(book.getCategory());
@@ -317,37 +299,34 @@ public class BookManagementView extends JFrame {
         dialog.add(formPanel, BorderLayout.CENTER);
         dialog.add(buttonPanel, BorderLayout.SOUTH);
 
-        saveButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    String title = titleField.getText().trim();
-                    String author = authorField.getText().trim();
-                    String category = (String) categoryComboBox.getSelectedItem();
-                    double price = Double.parseDouble(priceField.getText().trim());
-                    int quantity = Integer.parseInt(quantityField.getText().trim());
+        saveButton.addActionListener(_ -> {
+            try {
+                String title = titleField.getText().trim();
+                String author = authorField.getText().trim();
+                String category = (String) categoryComboBox.getSelectedItem();
+                double price = Double.parseDouble(priceField.getText().trim());
+                int quantity = Integer.parseInt(quantityField.getText().trim());
 
-                    if (title.isEmpty() || author.isEmpty()) {
-                        JOptionPane.showMessageDialog(dialog, "Vui lòng nhập đầy đủ thông tin!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-                        return;
-                    }
-
-                    book.setTitle(title);
-                    book.setAuthor(author);
-                    book.setCategory(category);
-                    book.setPrice(price);
-                    book.setQuantity(quantity);
-
-                    bookController.updateBook(book);
-                    dialog.dispose();
-                    loadBookData();
-                } catch (NumberFormatException ex) {
-                    JOptionPane.showMessageDialog(dialog, "Giá và số lượng phải là số!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                if (title.isEmpty() || author.isEmpty()) {
+                    JOptionPane.showMessageDialog(dialog, "Vui lòng nhập đầy đủ thông tin!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
+
+                book.setTitle(title);
+                book.setAuthor(author);
+                book.setCategory(category);
+                book.setPrice(price);
+                book.setQuantity(quantity);
+
+                bookController.updateBook(book);
+                dialog.dispose();
+                loadBookData();
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dialog, "Giá và số lượng phải là số!", "Lỗi", JOptionPane.ERROR_MESSAGE);
             }
         });
 
-        cancelButton.addActionListener(e -> dialog.dispose());
+        cancelButton.addActionListener(_ -> dialog.dispose());
         dialog.setVisible(true);
     }
 
@@ -358,7 +337,6 @@ public class BookManagementView extends JFrame {
             return;
         }
 
-        // Convert row index if table is sorted
         int modelRow = bookTable.getRowSorter() != null 
             ? bookTable.getRowSorter().convertRowIndexToModel(selectedRow) 
             : selectedRow;

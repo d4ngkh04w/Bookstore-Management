@@ -54,10 +54,22 @@ CREATE TABLE IF NOT EXISTS invoice_items (
     FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
 );
 
--- Dữ liệu mẫu cho bảng users
--- Sử dụng INSERT IGNORE để bỏ qua lỗi khi username đã tồn tại
+-- Thêm dữ liệu mẫu cho categories
+INSERT IGNORE INTO categories (name, description) VALUES
+('Văn học', 'Các tác phẩm văn học Việt Nam và quốc tế'),
+('Kinh tế - Quản lý', 'Sách về kinh doanh, quản lý và kinh tế học'),
+('Kỹ năng sống', 'Sách dạy về các kỹ năng sống và phát triển bản thân'),
+('Tâm lý học', 'Sách về tâm lý con người và các vấn đề tâm lý'),
+('Khoa học - Công nghệ', 'Sách về các chủ đề khoa học và công nghệ'),
+('Tiểu thuyết', 'Các thể loại tiểu thuyết đa dạng'),
+('Thiếu nhi', 'Sách dành cho trẻ em và thiếu niên'),
+('Giáo dục', 'Sách giáo khoa và tài liệu học tập'),
+('Lịch sử', 'Sách về lịch sử Việt Nam và thế giới'),
+('Triết học', 'Sách về triết học đông tây'),
+('Y học - Sức khỏe', 'Sách về y học và chăm sóc sức khỏe'),
+('Ngoại ngữ', 'Sách học ngoại ngữ và từ điển');
+
 INSERT IGNORE INTO users (username, password, full_name, role, active) VALUES
 ('admin', 'admin123', 'Administrator', 'ADMIN', true);
 
--- Để xóa database và tạo lại, bỏ comment dòng dưới đây:
 -- DROP DATABASE IF EXISTS bookstore;

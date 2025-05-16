@@ -1,20 +1,20 @@
 package com.bookstore.app.view;
 
+import com.bookstore.app.controller.UserController;
 import com.bookstore.app.model.User;
 import com.bookstore.app.service.UserService;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 public class LoginView extends JFrame {
     private JTextField usernameField;
     private JPasswordField passwordField;
-    private JButton loginButton;
     private JLabel statusLabel;
+    private final UserController userController;
 
     public LoginView() {
+        userController = new UserController(UserService.getInstance());
         initComponents();
     }
 
@@ -58,14 +58,9 @@ public class LoginView extends JFrame {
         mainPanel.add(Box.createRigidArea(new Dimension(0, 20)));
 
         // Login button
-        loginButton = new JButton("Đăng Nhập");
+        JButton loginButton = new JButton("Đăng Nhập");
         loginButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        loginButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                attemptLogin();
-            }
-        });
+        loginButton.addActionListener(_ -> attemptLogin());
         
         JPanel buttonPanel = new JPanel();
         buttonPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -74,42 +69,30 @@ public class LoginView extends JFrame {
         
         mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
 
-        // Status label for error messages
         statusLabel = new JLabel(" ");
         statusLabel.setForeground(Color.RED);
         statusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         mainPanel.add(statusLabel);
 
-        // Set the Enter key to trigger login
         getRootPane().setDefaultButton(loginButton);
 
         add(mainPanel);
-    }    private void attemptLogin() {
+    }
+
+    private void attemptLogin() {
         String username = usernameField.getText();
         String password = new String(passwordField.getPassword());
-        
-        UserService userService = UserService.getInstance();
-        
-        // Kiểm tra xem tài khoản có bị khóa không
-        User userCheck = userService.getUserDAO().getUserByUsername(username);
-        if (userCheck != null && !userCheck.isActive() && password.equals(userCheck.getPassword())) {
-            statusLabel.setText("Tài khoản đã bị khóa!");
-            statusLabel.setForeground(Color.RED);
-            passwordField.setText("");
-            return;
-        }
-        
-        User user = userService.authenticate(username, password);
+
+        User user = userController.login(username, password);
         
         if (user != null) {
             statusLabel.setText("Đăng nhập thành công!");
-            statusLabel.setForeground(new Color(0, 128, 0)); // Green color
-            
-            // Open main menu with the logged in user
+            statusLabel.setForeground(new Color(0, 128, 0));
+
             SwingUtilities.invokeLater(() -> {
                 MainMenuView mainMenu = new MainMenuView();
                 mainMenu.setVisible(true);
-                this.dispose(); // Close login window
+                this.dispose();
             });
         } else {
             statusLabel.setText("Sai tên đăng nhập hoặc mật khẩu!");

@@ -39,13 +39,4 @@ public class BookService {
     public Book getBookById(int id) {
         return bookDAO.getBookById(id);
     }
-    
-    public boolean isValidBook(Book book) {
-        return book != null &&
-               book.getTitle() != null && !book.getTitle().trim().isEmpty() &&
-               book.getAuthor() != null && !book.getAuthor().trim().isEmpty() &&
-               book.getCategory() != null && !book.getCategory().trim().isEmpty() &&
-               book.getPrice() >= 0 &&
-               book.getQuantity() >= 0;
-    }
 }
